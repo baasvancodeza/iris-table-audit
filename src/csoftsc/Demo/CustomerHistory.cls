@@ -71,12 +71,39 @@ Storage Default
 <Value>HistorizeBusinessHost</Value>
 </Value>
 <Value name="19">
-<Value>MarketingNewsletter</Value>
+<Value>CreateClientIP</Value>
 </Value>
 <Value name="20">
-<Value>ReseidentialAddress</Value>
+<Value>UpdateClientIP</Value>
 </Value>
 <Value name="21">
+<Value>HistorizeClientIP</Value>
+</Value>
+<Value name="22">
+<Value>CreateCSPSessionID</Value>
+</Value>
+<Value name="23">
+<Value>UpdateCSPSessionID</Value>
+</Value>
+<Value name="24">
+<Value>HistorizeCSPSessionID</Value>
+</Value>
+<Value name="25">
+<Value>CreateRoutine</Value>
+</Value>
+<Value name="26">
+<Value>UpdateRoutine</Value>
+</Value>
+<Value name="27">
+<Value>HistorizeRoutine</Value>
+</Value>
+<Value name="28">
+<Value>MarketingNewsletter</Value>
+</Value>
+<Value name="29">
+<Value>ReseidentialAddress</Value>
+</Value>
+<Value name="30">
 <Value>Version</Value>
 </Value>
 </Data>

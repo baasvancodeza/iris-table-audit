@@ -16,10 +16,10 @@ Parameter HISTORYTABLECLASS As String;
 
 Property Version As %Integer [ InitialExpression = 1 ];
 
-Property CreateDateTimeStamp As %TimeStamp [ InitialExpression = {$zdt($h,3)}, ReadOnly ];
+Property CreateDateTimeStamp As %TimeStamp [ InitialExpression = {$ZDATETIME($HOROLOG,3)}, ReadOnly ];
 
 /// Last Updated date and time
-Property UpdateDateTimeStamp As %TimeStamp [ InitialExpression = {$zdt($h,3)}, SqlComputeCode = { Set {*} = $zdt($h,3)}, SqlComputed, SqlComputeOnChange = %%UPDATE ];
+Property UpdateDateTimeStamp As %TimeStamp [ InitialExpression = {$ZDATETIME($HOROLOG,3)}, SqlComputeCode = { Set {*} = $ZDATETIME($HOROLOG,3)}, SqlComputed, SqlComputeOnChange = %%UPDATE ];
 
 /// Created by Job ID
 Property CreateJob As %Integer [ InitialExpression = {$JOB}, ReadOnly ];
@@ -38,6 +38,24 @@ Property CreateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(
 
 /// Last Updated by Interoperability Host (if applicable)
 Property UpdateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(%Ensemble("ConfigName"),"")}, SqlComputeCode = { Set {*} = $GET(%Ensemble("ConfigName"),"") }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
+
+/// Created by Client IP (if applicable)
+Property CreateClientIP As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.ClientIPAddress()}, ReadOnly ];
+
+/// Last Updated by Client IP (if applicable)
+Property UpdateClientIP As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.ClientIPAddress()}, SqlComputeCode = { Set {*} = $SYSTEM.Process.ClientIPAddress() }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
+
+/// Created by CSP Session ID (if applicable)
+Property CreateCSPSessionID As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.CSPSessionID()'=""}, ReadOnly ];
+
+/// Last Updated by CSP Session ID (if applicable)
+Property UpdateCSPSessionID As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.CSPSessionID()}, SqlComputeCode = { Set {*} = $SYSTEM.Process.CSPSessionID() }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
+
+/// Created by Routine
+Property CreateRoutine As %String(MAXLEN = "") [ InitialExpression = {$SELECT($SYSTEM.Process.CallingRoutine()'="":$SYSTEM.Process.CallingRoutine(),1:$SYSTEM.Process.Routine())}, ReadOnly ];
+
+/// Last Updated by Routine
+Property UpdateRoutine As %String(MAXLEN = "") [ InitialExpression = {$SELECT($SYSTEM.Process.CallingRoutine()'="":$SYSTEM.Process.CallingRoutine(),1:$SYSTEM.Process.Routine())}, SqlComputeCode = { Set {*} = $SELECT($SYSTEM.Process.CallingRoutine()'="":$SYSTEM.Process.CallingRoutine(),1:$SYSTEM.Process.Routine()) }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
 
 /// Generates the code to insert a history record
 /// entry for the compiled class</br>
@@ -248,7 +266,8 @@ ClassMethod SetHasHistoryTable() As %Boolean
 /// This does NOT process array, list or Many-Relationship properties as part of its history
 ClassMethod GetTimeLineDeltaJSON(
 	pRecId As %Integer,
-	Output pSC As %Status) As %Stream.TmpCharacter [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddFirstHistRecord, AddCurrentRecord, AddCurrentRecordDelte, AddHistRecordDelta) ]
+	pLogicalModeValues As %Boolean = 0,
+	Output pSC As %Status) As %Stream.TmpCharacter [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddFirstHistRecord, AddCurrentRecord, AddCurrentRecordDelte, AddHistRecordDelta), SqlProc ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
@@ -257,8 +276,8 @@ ClassMethod GetTimeLineDeltaJSON(
 	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -283,9 +302,9 @@ ClassMethod GetTimeLineDeltaJSON(
 		Do %code.WriteLine("			Quit:(SQLCODE'=0)")
 
 		Do %code.WriteLine("			if (tPrevId = """") {")
-		Do %code.WriteLine("				$$$ThrowOnError(..AddFirstHistRecord(tHistId, .tEntry))")
+		Do %code.WriteLine("				$$$ThrowOnError(..AddFirstHistRecord(tHistId, pLogicalModeValues, .tEntry))")
 		Do %code.WriteLine("			} Else {")
-		Do %code.WriteLine("				$$$ThrowOnError(..AddHistRecordDelta(tPrevId, tHistId, .tEntry))")
+		Do %code.WriteLine("				$$$ThrowOnError(..AddHistRecordDelta(tPrevId, tHistId, pLogicalModeValues, .tEntry))")
 		Do %code.WriteLine("			}")
 
 		Do %code.WriteLine("			Do tJSON.%Push(tEntry)")
@@ -297,11 +316,11 @@ ClassMethod GetTimeLineDeltaJSON(
 		Do %code.WriteLine("		$$$ThrowSQLIfError(SQLCODE,%msg)")
 
 		Do %code.WriteLine("		If (tPrevId '= """") {")
-		Do %code.WriteLine("			$$$ThrowOnError(..AddCurrentRecordDelta(tPrevId, pRecId, .tEntry))")
+		Do %code.WriteLine("			$$$ThrowOnError(..AddCurrentRecordDelta(tPrevId, pRecId, pLogicalModeValues, .tEntry))")
 		Do %code.WriteLine("			Do tJSON.%Push(tEntry)")
 		Do %code.WriteLine("		} else {")
 		Do %code.WriteLine("			// No history")
-		Do %code.WriteLine("			$$$ThrowOnError(..AddCurrentRecord(pRecId, .tEntry))")
+		Do %code.WriteLine("			$$$ThrowOnError(..AddCurrentRecord(pRecId, pLogicalModeValues, .tEntry))")
 		Do %code.WriteLine("			Do tJSON.%Push(tEntry)")
 		Do %code.WriteLine("		}")
 
@@ -314,7 +333,7 @@ ClassMethod GetTimeLineDeltaJSON(
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tResult")
 
-	} catch ex {
+	} Catch ex {
 		Set tSC = ex.AsStatus()
 	}
 	Quit tSC
@@ -322,6 +341,7 @@ ClassMethod GetTimeLineDeltaJSON(
 
 ClassMethod AddFirstHistRecord(
 	pRecId As %Integer,
+	pLogicalModeValues As %Boolean,
 	Output pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddFirstRecord), Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
@@ -331,8 +351,8 @@ ClassMethod AddFirstHistRecord(
 	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -341,12 +361,13 @@ ClassMethod AddFirstHistRecord(
 		Do %code.WriteLine("	try {")
 		Do %code.WriteLine("		Set pEntry = ##class(%Library.DynamicObject).%New()")
 		Do %code.WriteLine("		Set tObj = ##class(" _ %HistoryTableName _ ").%OpenId(pRecId)")
-		Do %code.WriteLine("		Set tSC = ..AddFirstRecord(tObj, .pEntry)")
+		Do %code.WriteLine("		Set tSC = ..AddFirstRecord(tObj, pLogicalModeValues, .pEntry)")
+		Do %code.WriteLine("		kill tObj")
 		Do %code.WriteLine("	} catch ex {")
 		Do %code.WriteLine("		Set tSC = ex.AsStatus()")
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
-	} catch ex {
+	} Catch ex {
 		Set tSC = ex.AsStatus()
 	}
 	Quit tSC
@@ -354,6 +375,7 @@ ClassMethod AddFirstHistRecord(
 
 ClassMethod AddCurrentRecord(
 	pRecId As %Integer,
+	pLogicalModeValues As %Boolean,
 	Output pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddFirstRecord), Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
@@ -363,8 +385,8 @@ ClassMethod AddCurrentRecord(
 	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -373,12 +395,13 @@ ClassMethod AddCurrentRecord(
 		Do %code.WriteLine("	try {")
 		Do %code.WriteLine("		Set pEntry = ##class(%Library.DynamicObject).%New()")
 		Do %code.WriteLine("		Set tObj = ##class(" _ %compiledclass.Name _ ").%OpenId(pRecId)")
- 		Do %code.WriteLine("		Set tSC = ..AddFirstRecord(tObj, .pEntry)")
+ 		Do %code.WriteLine("		Set tSC = ..AddFirstRecord(tObj, pLogicalModeValues, .pEntry)")
+		Do %code.WriteLine("		kill tObj")
 		Do %code.WriteLine("	} catch ex {")
 		Do %code.WriteLine("		Set tSC = ex.AsStatus()")
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
-	} catch ex {
+	} Catch ex {
 		Set tSC = ex.AsStatus()
 	}
 	Quit tSC
@@ -386,6 +409,7 @@ ClassMethod AddCurrentRecord(
 
 ClassMethod AddFirstRecord(
 	pObj As %RegisteredObject,
+	pLogicalModeValues As %Boolean,
 	ByRef pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = SetHasHistoryTable, Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
@@ -395,8 +419,8 @@ ClassMethod AddFirstRecord(
 	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -406,33 +430,34 @@ ClassMethod AddFirstRecord(
 		Do %code.WriteLine("		Do pEntry.%Set(""DateTimeStamp"", pObj.CreateDateTimeStamp)")
 		Do %code.WriteLine("		Set tFields = ##class(%Library.DynamicObject).%New()")
 		
-		$$$ThrowOnError(..TimeLineAddProperties("Do tFields.%Set(""%field"", pObj.%pval)","pObj"))
+		$$$ThrowOnError(..TimeLineAddProperties("Do tFields.%Set(""%field"", pObj.%pval)","Do tFields.%Set(""%field"", $s(pLogicalModeValues:pObj.%pvalLogicalToJSON(pObj.%pval),1:pObj.%pval))","pObj"))
 
 		Do %code.WriteLine("		Do pEntry.%Set(""Fields"", tFields)")
 		Do %code.WriteLine("	} catch ex {")
 		Do %code.WriteLine("		Set tSC = ex.AsStatus()")
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 ClassMethod AddHistRecordDelta(
 	pPrevId As %Integer,
 	pRecId As %Integer,
+	pLogicalModeValues As %Boolean,
 	Output pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddDelta), Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
 		Return $$$OK
 	}
-	set tSC = $$$OK
+	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -442,31 +467,33 @@ ClassMethod AddHistRecordDelta(
 		Do %code.WriteLine("		Set pEntry = ##class(%Library.DynamicObject).%New()")
 		Do %code.WriteLine("		Set tPrev = ##class(" _ %HistoryTableName _ ").%OpenId(pPrevId)")
 		Do %code.WriteLine("		Set tNext = ##class(" _ %HistoryTableName _ ").%OpenId(pRecId)")
-		Do %code.WriteLine("		Set tSC = ..AddDelta(tPrev, tNext, .pEntry)")
+		Do %code.WriteLine("		Set tSC = ..AddDelta(tPrev, tNext, pLogicalModeValues, .pEntry)")
+		Do %code.WriteLine("		kill tNext,tPrev")
 		Do %code.WriteLine("	} catch ex {")
 		Do %code.WriteLine("		Set tSC = ex.AsStatus()")
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 ClassMethod AddCurrentRecordDelta(
 	pPrevId As %Integer,
 	pRecId As %Integer,
+	pLogicalModeValues As %Boolean,
 	Output pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = (SetHasHistoryTable, AddDelta), Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
 		Return $$$OK
 	}
-	set tSC = $$$OK
+	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -475,31 +502,35 @@ ClassMethod AddCurrentRecordDelta(
 		Do %code.WriteLine("		Set pEntry = ##class(%Library.DynamicObject).%New()")
 		Do %code.WriteLine("		Set tPrev = ##class(" _ %HistoryTableName _ ").%OpenId(pPrevId)")
 		Do %code.WriteLine("		Set tNext = ##class(" _ %compiledclass.Name _ ").%OpenId(pRecId)")
-		Do %code.WriteLine("		Set tSC = ..AddDelta(tPrev, tNext, .pEntry)")
+		Do %code.WriteLine("		Do tNext.%Reload()") ; For some reason it reflects the old record version if I don't do this
+		Do %code.WriteLine("		Set tSC = ..AddDelta(tPrev, tNext, pLogicalModeValues, .pEntry)")
+		Do %code.WriteLine("		kill tNext,tPrev")
+
 		Do %code.WriteLine("	}catch ex {")
 		Do %code.WriteLine("		Set tSC = ex.AsStatus()")
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
-	}catch ex {
-		set tSC = ex.AsStatus()
+	}Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 ClassMethod AddDelta(
 	pPrev As %RegisteredObject,
 	pRec As %RegisteredObject,
+	pLogicalModeValues As %Boolean,
 	Output pEntry As %Library.DynamicObject) As %Status [ CodeMode = objectgenerator, GenerateAfter = SetHasHistoryTable, Private ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
 		Return $$$OK
 	}
-	set tSC = $$$OK
+	Set tSC = $$$OK
 	#dim tCompiledClass As %Dictionary.CompiledClass
 	#dim tCompiledProp As %Dictionary.CompiledProperty
-	try {
-		if ('..SetHasHistoryTable()) {
+	Try {
+		If ('..SetHasHistoryTable()) {
 			Set %code = 0
 			Return tSC
 		}
@@ -509,7 +540,7 @@ ClassMethod AddDelta(
 		Do %code.WriteLine("		Do pEntry.%Set(""DateTimeStamp"", pRec.UpdateDateTimeStamp)")
 		Do %code.WriteLine("		Set tFields = ##class(%Library.DynamicObject).%New()")
 
-		$$$ThrowOnError(..TimeLineAddProperties("Do:(pPrev.%pval'=pRec.%pval) tFields.%Set(""%field"", pRec.%pval)","pRec,pPrev"))
+		$$$ThrowOnError(..TimeLineAddProperties("Do:(pPrev.%pval'=pRec.%pval) tFields.%Set(""%field"", pRec.%pval)","Do:(pPrev.%pval'=pRec.%pval) tFields.%Set(""%field"", $s(pLogicalModeValues:pRec.%pval,1:pRec.%pvalLogicalToJSON(pRec.%pval)))","pRec,pPrev"))
 
 		Do %code.WriteLine("		Do pEntry.%Set(""Fields"", tFields)")
 		Do %code.WriteLine("	} catch ex {")
@@ -517,10 +548,10 @@ ClassMethod AddDelta(
 		Do %code.WriteLine("	}")
 		Do %code.WriteLine("	Quit tSC")
 
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 /// Generate the code for property lines of an object.
@@ -535,14 +566,15 @@ ClassMethod AddDelta(
 /// and 2nd must be the previous
 ClassMethod TimeLineAddProperties(
 	pLineMask As %String(MAXLEN=""),
-	pIfObjectNames As %String) As %Status
+	pToJSONLineMask As %String(MAXLEN=""),
+	pIfObjectNames As %String) As %Status [ GenerateAfter = IsLogicalToJSONCapable ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
 		Return $$$OK
 	}
 	Set tSC = $$$OK
-	try {
+	Try {
 		For i=1:1:%compiledclass.Properties.Count() {
 			Set tCompiledProp = %compiledclass.Properties.GetAt(i)
 			// Skip ISC properties
@@ -553,25 +585,26 @@ ClassMethod TimeLineAddProperties(
 			If (tCompiledProp.Collection '= "") {
 				Continue
 			}
-			$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp, pLineMask, pIfObjectNames, ""))
+			$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp,pLineMask, pToJSONLineMask, pIfObjectNames, ""))
 		} // end for non-collection property assignment
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 /// Add the line of a property
 ClassMethod TimeLineAddProperty(
 	pProperty As %Dictionary.CompiledProperty,
 	pLineMask As %String(MAXLEN=""),
+	pToJSONLineMask As %String(MAXLEN=""),
 	pIfObjectNames As %String,
 	pFieldPrefix As %String(MAXLEN=""),
 	pElseLines As %Boolean = 0,
-	pTabLevel As %Integer = 2) As %Status
+	pTabLevel As %Integer = 2) As %Status [ GenerateAfter = IsLogicalToJSONCapable ]
 {
 	Set tSC = $$$OK
-	try {
+	Try {
 		Set:(pFieldPrefix'="") tPropStr = pFieldPrefix _ "_" _ pProperty.Name
 		Set:(pFieldPrefix="") tPropStr = pProperty.Name
 		Set tPropValStr = ""
@@ -587,48 +620,54 @@ ClassMethod TimeLineAddProperty(
 			Set:(pFieldPrefix'="") tPropValStr = $REPLACE(pFieldPrefix,"_",".") _ "." _ pProperty.Name
 			Set:(pFieldPrefix="") tPropValStr = pProperty.Name
 		} ElseIf (tAssignSerial) {
-			$$$ThrowOnError(..TimeLineAddSerialProperty(pProperty, pLineMask, pIfObjectNames, tPropStr, pElseLines, pTabLevel))
+			$$$ThrowOnError(..TimeLineAddSerialProperty(pProperty, pLineMask, pToJSONLineMask, pIfObjectNames, tPropStr, pElseLines, pTabLevel))
 		} Else {
 			Set:(pFieldPrefix'="") tPropValStr = pFieldPrefix _ "." _ pProperty.Name _ "GetObjectId()"
 			Set:(pFieldPrefix="") tPropValStr = pProperty.Name _ "GetObjectId()"
 		}
+		Set tCanToJSON = ..IsLogicalToJSONCapable(pProperty)
 		If (tPropValStr'="") {
-			Set tLine = $REPLACE(pLineMask,"%pval",tPropValStr)
-			Set tLine = $$$LeftPad("",pTabLevel,$c(9)) _ $REPLACE(tLine,"%field",tPropStr)
+			If (tCanToJSON) {
+				Set tLine = $REPLACE(pToJSONLineMask,"%pval",tPropValStr)
+			} Else {
+				Set tLine = $REPLACE(pLineMask,"%pval",tPropValStr)
+			}
+			Set tLine = $$$LeftPad("",pTabLevel,$CHAR(9)) _ $REPLACE(tLine,"%field",tPropStr)
 			Do %code.WriteLine(tLine)
 		}
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
 }
 
 /// Process a property that is of type serial
 ClassMethod TimeLineAddSerialProperty(
 	pProperty As %Dictionary.CompiledProperty,
 	pLineMask As %String(MAXLEN=""),
+	pToJSONLineMask As %String(MAXLEN=""),
 	pIfObjectNames As %String,
 	pFieldPrefix As %String(MAXLEN=""),
 	pElseLines As %Boolean,
-	pTabLevel As %Integer) As %Status
+	pTabLevel As %Integer) As %Status [ GenerateAfter = IsLogicalToJSONCapable ]
 {
 	If (%compiledclass.Name = "csoftsc.PersistentAudit.Base") {
 		Set %code = 0
 		Return $$$OK
 	}
 	Set tSC = $$$OK
-	try {
+	Try {
 		Set tIfObjs = $LISTFROMSTRING(pIfObjectNames)
 		Set tTabs = pTabLevel
-		Set tIfLine = $$$LeftPad("",tTabs,$char(9))
-		Set tCloseLine = $$$LeftPad("",tTabs,$char(9))
+		Set tIfLine = $$$LeftPad("",tTabs,$CHAR(9))
+		Set tCloseLine = $$$LeftPad("",tTabs,$CHAR(9))
 		Set tIfLine = tIfLine _ "If ("
 		Set tCloseLine = tCloseLine _ "}"
 		Set tPropertyClass = ##class(%Dictionary.CompiledClass).%OpenId(pProperty.Type,0)
 		
 		If ('pElseLines) {
-			For i=1:1:$ll(tIfObjs) {
-				Set tObjName = $lg(tIfObjs,i)
+			For i=1:1:$LISTLENGTH(tIfObjs) {
+				Set tObjName = $LISTGET(tIfObjs,i)
 				If (i = 1) {
 					Set tIfLine = tIfLine _ "(" _ tObjName _ "." _ $REPLACE(pFieldPrefix,"_",".") _ " '= $$$NULLOREF)"
 				} Else {
@@ -652,7 +691,7 @@ ClassMethod TimeLineAddSerialProperty(
 					Continue
 				}
 				
-				$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp, pLineMask, pIfObjectNames, pFieldPrefix,0,tTabs))
+				$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp, pLineMask, pToJSONLineMask, pIfObjectNames, pFieldPrefix,0,tTabs))
 			} ; Serial Object properties for
 		
 			Do %code.WriteLine(tCloseLine _ " Else {")
@@ -665,29 +704,33 @@ ClassMethod TimeLineAddSerialProperty(
 		// If it is the second, the values changed to a null from a non-null value.
 		// Also handle for when the object is null if only a single
 		Set tSavTabs = tTabs
-		For i=1:1:$ll(tIfObjs) {
+		For i=1:1:$LISTLENGTH(tIfObjs) {
+			Set (tLineMask, tToJSONLineMask) = ""
 			Set tTabs = tSavTabs
-			Set tObjName = $lg(tIfObjs,i)
+			Set tObjName = $LISTGET(tIfObjs,i)
 
-			If (($ll(tIfObjs) > 1) && ('pElseLines)) {
-				Do %code.WriteLine($$$LeftPad("",pTabLevel+1,$char(9)) _ "If (" _ tObjName _ " '= $$$NULLOREF) {")
+			If (($LISTLENGTH(tIfObjs) > 1) && ('pElseLines)) {
+				Do %code.WriteLine($$$LeftPad("",pTabLevel+1,$CHAR(9)) _ "If (" _ tObjName _ " '= $$$NULLOREF) {")
 				Set tTabs = tTabs + 1
 			} ElseIf ('pElseLines) {
 				;Set tTabs = tTabs - 1
 			}
-			If (($ll(tIfObjs) > 1) && (i = 1)) {
+			If (($LISTLENGTH(tIfObjs) > 1) && (i = 1)) {
 				// Else of if with two object not null checks
 				// so each object checks separately.
 				// This is the current rec where the previous was null values
 				Set tLineMask = "Do tFields.%Set(""%field"", " _ tObjName _ ".%pval)"
+				Set tToJSONLineMask = "Do tFields.%Set(""%field"", $s(pLogicalModeValues:" _ tObjName _ ".%pvalLogicalToXSD(),1:" _ tObjName _ ".%pval))"
 			}
-			If ((i=1) && ($ll(tIfObjs)=1)) {
+			If ((i=1) && ($LISTLENGTH(tIfObjs)=1)) {
 				// else part of single object as with "first records"
 				Set tLineMask = "Do tFields.%Set(""%field"", """")"
+				Set tToJSONLineMask = tLineMask
 			}
 			If (i > 1) {
 				// the second prev was not null, and current is, so set values to null.
 				Set tLineMask = "Do tFields.%Set(""%field"", """")"
+				Set tToJSONLineMask = tLineMask
 			}
 			
 			
@@ -705,17 +748,24 @@ ClassMethod TimeLineAddSerialProperty(
 				If (tCompiledProp.Collection '= "") {
 					Continue
 				}
-				$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp, tLineMask, tObjName, pFieldPrefix, tInElse, tTabs))
+				$$$ThrowOnError(..TimeLineAddProperty(tCompiledProp, tLineMask, tToJSONLineMask, tObjName, pFieldPrefix, tInElse, tTabs))
 			}
-			Do:(($ll(tIfObjs)>1)&&('pElseLines)) %code.WriteLine($$$LeftPad("",pTabLevel+1,$char(9)) _ "}")
+			Do:(($LISTLENGTH(tIfObjs)>1)&&('pElseLines)) %code.WriteLine($$$LeftPad("",pTabLevel+1,$CHAR(9)) _ "}")
 		} ; for ObjNames
 		Set tTabs = tSavTabs
 
 		Do:('pElseLines) %code.WriteLine(tCloseLine)
-	} catch ex {
-		set tSC = ex.AsStatus()
+	} Catch ex {
+		Set tSC = ex.AsStatus()
 	}
-	quit tSC
+	Quit tSC
+}
+
+ClassMethod IsLogicalToJSONCapable(pCompiledProperty As %Dictionary.CompiledProperty) As %Boolean
+{
+	Set tCompiledMethod=##class(%Dictionary.CompiledPropertyMethod).%OpenId(pCompiledProperty.%Id()_"||LogicalToJSON",0)
+	Quit:(tCompiledMethod=$$$NULLOREF) 0
+	Quit 1
 }
 
 }

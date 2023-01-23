@@ -48,7 +48,34 @@ Property CreateBusinessHost As %String(MAXLEN = "");
 /// Last Modified by Interoperability Host (if applicable)
 Property UpdateBusinessHost As %String(MAXLEN = "");
 
-/// Ensem,ble host that inserted this entry (if applicable)
+/// Interoperability host that inserted this entry (if applicable)
 Property HistorizeBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(%Ensemble("ConfigName"),"")}, ReadOnly ];
+
+/// Created by Client IP (if applicable)
+Property CreateClientIP As %String(MAXLEN = "");
+
+/// Last Updated by Client IP (if applicable)
+Property UpdateClientIP As %String(MAXLEN = "");
+
+/// Client IP that caused this record to be inserted
+Property HistorizeClientIP As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.ClientIPAddress()}, ReadOnly ];
+
+/// Created by CSP Session ID (if applicable)
+Property CreateCSPSessionID As %String(MAXLEN = "");
+
+/// Last Updated by CSP Session ID (if applicable)
+Property UpdateCSPSessionID As %String(MAXLEN = "");
+
+/// CSP Session ID that caused this record to be inserted
+Property HistorizeCSPSessionID As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.CSPSessionID()}, ReadOnly ];
+
+/// Created by Routine
+Property CreateRoutine As %String(MAXLEN = "");
+
+/// Last Updated by Routine
+Property UpdateRoutine As %String(MAXLEN = "");
+
+/// Routine from where this record was inserted
+Property HistorizeRoutine As %String(MAXLEN = "") [ InitialExpression = {$SELECT($SYSTEM.Process.CallingRoutine()'="":$SYSTEM.Process.CallingRoutine(),1:$SYSTEM.Process.Routine())}, ReadOnly ];
 
 }

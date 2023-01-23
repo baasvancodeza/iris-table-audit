@@ -1,6 +1,10 @@
 Class csoftsc.Demo.Customer Extends csoftsc.PersistentAudit.Base [ CompileAfter = (Address, csoftsc.Demo.CustomerHistory) ]
 {
 
+Index NameIndex On Name;
+
+Index SurnameIndex On Surname;
+
 Parameter HISTORYTABLECLASS = "csoftsc.Demo.CustomerHistory";
 
 Property Name As %String [ Required ];
@@ -28,42 +32,60 @@ Storage Default
 <Value>Surname</Value>
 </Value>
 <Value name="4">
-<Value>MobileNumber</Value>
+<Value>CreateDateTimeStamp</Value>
 </Value>
 <Value name="5">
 <Value>ReseidentialAddress</Value>
 </Value>
 <Value name="6">
-<Value>Email</Value>
-</Value>
-<Value name="7">
-<Value>CreateDateTimeStamp</Value>
-</Value>
-<Value name="8">
-<Value>UpdateDateTimeStamp</Value>
-</Value>
-<Value name="9">
 <Value>CreateJob</Value>
 </Value>
-<Value name="10">
-<Value>UpdateJob</Value>
-</Value>
-<Value name="11">
-<Value>CreateSystemUser</Value>
-</Value>
-<Value name="12">
-<Value>UpdateSystemUser</Value>
-</Value>
-<Value name="13">
-<Value>CreateBusinessHost</Value>
-</Value>
-<Value name="14">
-<Value>UpdateBusinessHost</Value>
-</Value>
-<Value name="15">
+<Value name="7">
 <Value>MarketingNewsletter</Value>
 </Value>
+<Value name="8">
+<Value>CreateSystemUser</Value>
+</Value>
+<Value name="9">
+<Value>UpdateSystemUser</Value>
+</Value>
+<Value name="10">
+<Value>CreateBusinessHost</Value>
+</Value>
+<Value name="11">
+<Value>UpdateBusinessHost</Value>
+</Value>
+<Value name="12">
+<Value>CreateClientIP</Value>
+</Value>
+<Value name="13">
+<Value>UpdateClientIP</Value>
+</Value>
+<Value name="14">
+<Value>CreateCSPSessionID</Value>
+</Value>
+<Value name="15">
+<Value>UpdateCSPSessionID</Value>
+</Value>
 <Value name="16">
+<Value>CreateRoutine</Value>
+</Value>
+<Value name="17">
+<Value>UpdateRoutine</Value>
+</Value>
+<Value name="18">
+<Value>Email</Value>
+</Value>
+<Value name="19">
+<Value>MobileNumber</Value>
+</Value>
+<Value name="20">
+<Value>UpdateDateTimeStamp</Value>
+</Value>
+<Value name="21">
+<Value>UpdateJob</Value>
+</Value>
+<Value name="22">
 <Value>Version</Value>
 </Value>
 </Data>
