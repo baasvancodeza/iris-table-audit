@@ -13,6 +13,8 @@ ClassMethod Run()
 		kill ^csoftsc.Demo.CustomerI
 		kill ^csoftsc.Demo.CustomerD
 		kill ^csoftsc.Demo.CustomerS
+		kill ^PersistentAudit("csoftsc.Demo.Customer")
+		kill ^PersistentAuditAutoPurge("csoftsc.Demo.Customer")
 
 		Set tCust = ##class(csoftsc.Demo.Customer).%New()
 		Set tAddr = ##class(csoftsc.Demo.Address).%New()
@@ -26,31 +28,32 @@ ClassMethod Run()
 		Set tAddr.City = "Void"
 		Set tAddr.ZipCode = "1"
 		Set tCust.ReseidentialAddress = tAddr
-		
 		Do tCust.%NormalizeObject()
 		$$$ThrowOnError(tCust.%Save())
-
-		Set tDataStream = ##class(csoftsc.Demo.Customer).GetTimeLineDeltaJSON(tCust.%Id(),0,.tSC)
-		$$$ThrowOnError(tSC)
-		Do tDataStream.Rewind()
-		w !,"JSON Data:",!,tDataStream.Read()
+		w !,"Check on SMP for the records if you'd like to."
 		r !,"Press ENTER to continue",tDummy
 		w !
 
-		W !!,"Update 1"
+		W !!,"Update 1",!
 		Set tCust.MobileNumber = "+27987654321"
 		Set tCust.Email = "susan@cyber.space"
 		Do tCust.%NormalizeObject()
 		$$$ThrowOnError(tCust.%Save())
 
-		Set tDataStream = ##class(csoftsc.Demo.Customer).GetTimeLineDeltaJSON(tCust.%Id(),0,.tSC)
-		$$$ThrowOnError(tSC)
-		Do tDataStream.Rewind()
-		w !,"JSON Data:",!,tDataStream.Read()
+		Set tSQLStmnt = ##class(%SQL.Statement).%New(2)
+		Set tSQL = ""
+		Set tSQLArgs = ""
+		Set tSQL($i(tSQL)) = "select ID, CreateDateTimeStamp, UpdateDateTimeStamp, HistorizeDateTimeStamp"
+		Set tSQL($i(tSQL)) = "from csoftsc_Demo.CustomerHistory"
+		Set tSQL($i(tSQL)) = "where CurrentRecordId = ?"
+		Set tSQLArgs($i(tSQLArgs)) = tCust.%Id()
+		Do tSQLStmnt.%Prepare(.tSQL)
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
 		r !,"Press ENTER to continue",tDummy
-		w !
 
-		W !!,"Update 2"
+
+		W !!,"Update 2",!
 		Set tCust.ReseidentialAddress.StreetNumber = "555"
 		Set tCust.ReseidentialAddress.StreetName = "std:cout Street"
 		Set tCust.ReseidentialAddress.Suburb = "Void Space"
@@ -58,46 +61,54 @@ ClassMethod Run()
 		Set tCust.ReseidentialAddress.ZipCode = "2"
 		Do tCust.%NormalizeObject()
 		$$$ThrowOnError(tCust.%Save())
-
-		Set tDataStream = ##class(csoftsc.Demo.Customer).GetTimeLineDeltaJSON(tCust.%Id(),0,.tSC)
-		$$$ThrowOnError(tSC)
-		Do tDataStream.Rewind()
-		w !,"JSON Data:",!,tDataStream.Read()
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
 		r !,"Press ENTER to continue",tDummy
 		w !
 
-		Set tDataStream = ##class(csoftsc.Demo.Customer).GetTimeLineDeltaJSON(tCust.%Id(),1,.tSC)
-		$$$ThrowOnError(tSC)
-		Do tDataStream.Rewind()
-		w !,"JSON Data with Logical Values:",!,tDataStream.Read()
-		r !,"Press ENTER to continue",tDummy
-
-		w !!,"JSON Data using Dynamic SQL",!
-		Set tSQLStr = ""
-		Set tSQLStr($i(tSQLStr)) = "select csoftsc_Demo.Customer_GetTimeLineDeltaJSON(id)"
-		Set tSQLStr($i(tSQLStr)) = "from csoftsc_Demo.Customer"
-		Set tSQLStr($i(tSQLStr)) = "where Name = 'Susan'"
-		Set tSQL = ##class(%SQL.Statement).%New(1)
-		w tSQL.%Prepare(.tSQLStr)
-		s tResult = tSQL.%Execute()
-		If (tResult.%Next()) {
-			w !,tResult.%GetData(1).Read()
-		}
-		r !,"Press ENTER to continue",tDummy
-		w !
-
-		W !!,"Update 3 using SQL"
+		
+		W !!,"Switching Off Historization"
+		Set ^PersistentAuditOff("csoftsc.Demo.Customer") = 1
+		w !,"Update 3 using SQL."
 		&sql(update csoftsc_Demo.Customer
 	   		set Name = 'Sue' where Name = 'Susan')
-		w !,"SQLCDOE: ",SQLCODE		Set tDataStream = ##class(csoftsc.Demo.Customer).GetTimeLineDeltaJSON(tCust.%Id(),0,.tSC)
-		$$$ThrowOnError(tSC)
-		Do tDataStream.Rewind()
-		w !,"JSON Data:",!,tDataStream.Read()
+		w !,"SQLCDOE: ",SQLCODE,!
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
+		w !
 
-		w !!,"In SMP you can run the following queries to inspect the data"
-		w !,"select * from csoftsc_Demo.Customer"
-		w !,"select * from csoftsc_Demo.CustomerHistory where CurrentRecordId = 1"
-		r !!,"Press ENTER to continue",tDummy
+		W !!,"Switching Historization back on"
+		Set ^PersistentAuditOff("csoftsc.Demo.Customer") = 0
+		w !,"Update 4 using SQL."
+		&sql(update csoftsc_Demo.Customer
+	   		set Name = 'Kelly' where Name = 'Sue')
+		w !,"SQLCDOE: ",SQLCODE,!
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
+		w !
+
+		W !!,"Setting Auto-purge to 2"
+		Set ^PersistentAuditAutoPurge("csoftsc.Demo.Customer") = 2
+		w !,"Update 4 using SQL."
+		&sql(update csoftsc_Demo.Customer
+	   		set Name = 'Mary' where Name = 'Kelly')
+		w !,"SQLCDOE: ",SQLCODE,!
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
+		w !
+
+		W !!,"Switching Auto-purge off"
+		Set ^PersistentAuditAutoPurge("csoftsc.Demo.Customer") = 0
+		w !,"Update 4 using SQL."
+		&sql(update csoftsc_Demo.Customer
+	   		set Name = 'Susan' where Name = 'Mary')
+		w !,"SQLCDOE: ",SQLCODE,!
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
 		w !
 
 	} catch ex {
