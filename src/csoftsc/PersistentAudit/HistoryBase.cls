@@ -9,6 +9,8 @@ Index CreateDateTimeStampIndex On CreateDateTimeStamp;
 
 Index UpdateDateTimeStampIndex On UpdateDateTimeStamp;
 
+Index CurrentRecordIdVersionIndex On (CurrentRecordId, Version) [ Unique ];
+
 /// The Table IdKey of the main record
 Property CurrentRecordId As %String [ Required ];
 

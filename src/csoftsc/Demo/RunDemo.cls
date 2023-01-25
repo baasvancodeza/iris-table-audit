@@ -43,9 +43,15 @@ ClassMethod Run()
 		Set tSQLStmnt = ##class(%SQL.Statement).%New(2)
 		Set tSQL = ""
 		Set tSQLArgs = ""
-		Set tSQL($i(tSQL)) = "select ID, CreateDateTimeStamp, UpdateDateTimeStamp, HistorizeDateTimeStamp"
+		Set tSQL($i(tSQL)) = "select 'hstr'||to_char(ID) as ""recid"", Version As ""Ver"", MobileNumber, ReseidentialAddress_ZipCode As ""ZipCode"" , Name, UpdateDateTimeStamp As ""UpdateDTS"", HistorizeDateTimeStamp As ""HistorizeDTS"""
 		Set tSQL($i(tSQL)) = "from csoftsc_Demo.CustomerHistory"
 		Set tSQL($i(tSQL)) = "where CurrentRecordId = ?"
+		Set tSQL($i(tSQL)) = "UNION ALL"
+		Set tSQL($i(tSQL)) = "select 'main'||to_char(ID) as ""recid"", Version As ""Ver"", MobileNumber, ReseidentialAddress_ZipCode As ""ZipCode"" , Name, UpdateDateTimeStamp As ""UpdateDTS"", '-----' As ""HistorizeDTS"""
+		Set tSQL($i(tSQL)) = "from csoftsc_Demo.Customer"
+		Set tSQL($i(tSQL)) = "where ID = ?"
+		Set tSQL($i(tSQL)) = "order by 1"
+		Set tSQLArgs($i(tSQLArgs)) = tCust.%Id()
 		Set tSQLArgs($i(tSQLArgs)) = tCust.%Id()
 		Do tSQLStmnt.%Prepare(.tSQL)
 		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
@@ -110,6 +116,24 @@ ClassMethod Run()
 		do tResultSet.%Display()
 		r !,"Press ENTER to continue",tDummy
 		w !
+
+		W !!,"Restoring Version 4 with ObjectScript"
+		Set tSuccess = ##class(csoftsc.Demo.Customer).RestoreVersion(tCust.%Id(),4)
+		w !,"Success: ",tSuccess,!
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
+		w !
+		
+		W !!,"Restoring Previous Version using SQL"
+		Set tId = tCust.%Id()
+		&sql(:tSuccess = call csoftsc_Demo.Customer_RestorePreviousVersion(:tId))
+		w !,"SQLCDOE: ",SQLCODE,!,"Success: ",tSuccess
+		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
+		do tResultSet.%Display()
+		r !,"Press ENTER to continue",tDummy
+		w !
+		
 
 	} catch ex {
 		write !,"ERROR: ",ex.DisplayString()

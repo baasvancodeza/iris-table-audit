@@ -1,1 +1,3 @@
-.vscode/settings.json
+.buildpath
+.vscode
+*.bak

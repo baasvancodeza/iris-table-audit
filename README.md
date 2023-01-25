@@ -1,4 +1,5 @@
 # InterSystem IRIS Table Audit
+
 Bbse classes to use on Persistent (table) classes for InterSystems IRIS to keep record history  
 These classes enable the historizing of persistent class records into another persistent class when touched.  
 This provides for a full history of any record.  
@@ -6,6 +7,7 @@ It allows for record rollback to a specific version.
 It can automatically purge old history records.
 
 # Installation
+
 zpm "install csoftsc-persistent-audit"  
 The usage sample is available in the GitHub repo  
 ```
@@ -13,14 +15,18 @@ git clone https://github.com/csoft-sc/iris-table-audit.git
 ```
 
 ## Using the Demo
+
 - Clone the repo
 - Import the includes and classes and compile
+  - csoftsc.PersistentAudit first
+  - csoftsc.Demo second
 - Open a terminal
-  - Change to the namespace where you have installed the package and imported the Demo srouce
+  - Change to the namespace where you have imported the package and imported the Demo srouce
   - Run the following  
     ``Do ##class(csoftsc.Demo.RunDemo).Run()``
 
 # Package Structure
+
 | Path | Purpose |
 | --- | --- |
 | /src/csoftsc/PersistentAudit | Source to use and include in your deployment |
@@ -28,22 +34,50 @@ git clone https://github.com/csoft-sc/iris-table-audit.git
 
 # Usage
 ## Implementation
+
 - Create a class and extend from csoftsc.PersistentAudit.Base
   - Add all the properties to the class
 - Create a second class and extend from csoftsc.PersistentAudit.HistoryBase
   - Add the same properties as you have in the first class.  
-  They must align.
-  It is recommended to NOT add validation parameters, like MINVAL, or make properties required on the history table. MAXLEN should not be omitted from the history table.  
-  It is also not recommended to have Foreign Keys in the hisory table.
+    - They must align.
+    - It is recommended to NOT do the following in the History class
+      - Add validation parameters, like MINVAL, or make properties required. MAXLEN is an exception and should not be omitted from the history table.  
+      - Have Foreign Keys in the hisory table. You can have the reference property, but omit the "ForeignKey".
 - Override the HISTORYTABLECLASS parameter of the first class, and set its value to the name of the second class.
 - Compile the second(history) class always prior to the first(main) class.  
 
-### Controlling Historization
-To disable the auto historizing of records for a Persistent Class, set the ^PersistentAuditOff("MyPackage.ClassName") to 1  
-e.g. ^PersistentAuditOff("csoftsc.Demo.Customer") = 1  
-To keep only a specific number of history record, set the ^PersistentAuditAutoPurge("MyPackage.ClassName") to the number of history records to keep  
-If not set, or less than or equal to 0, auto archiving will not be done  
-e.g. ^PersistentAuditAutoPurge("csoftsc.Demo.Customer") = 2
+### Trigger Information and Order
 
-# Contributors
-Stefan Cronje: @Stefan.Cronje1399
+The generated triggers are set to run on row/object, which means it applies to Object-level and SQL operations.  
+The triggers are orderred at number 10, which means you can still let your own triggers execute before or after the historization triggers.
+
+### Controlling Historization
+
+To disable the auto historizing of records for a Persistent Class, set the __^PersistentAuditOff("MyPackage.ClassName")__ to 1  
+e.g. ``^PersistentAuditOff("csoftsc.Demo.Customer") = 1  ``
+To keep only a specific number of history records, set the __^PersistentAuditAutoPurge("MyPackage.ClassName")__ to the number of history records to keep  
+If not set, or tod less than or equal to 0, auto archiving will not be done.  
+e.g. ``^PersistentAuditAutoPurge("csoftsc.Demo.Customer") = 2``
+
+### Record Restore (Rollback)
+
+The class that extends from the base will contain two class methods that are available as Stored Procedures as well.
+- RestoreVersion. Example:  
+  ``Set tSuccess = ##class(csoftsc.Demo.Customer).RestoreVersion(tCust.%Id(),4)``
+- RestorePreviousVersion. Example:  
+  ``&sql(:tSuccess = call csoftsc_Demo.Customer_RestorePreviousVersion(:tId))``
+
+## Versioning
+
+We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/intersystems/TestCoverage/tags).
+
+## Authors
+
+* **Stefan Cronje** - *Initial implementation* - [cssoft-sc](http://github.com/csoft-sc)  
+  InterSystem Communitry: @Stefan.Cronje1399
+
+See also the list of [contributors](https://github.com/csoft-sc/iris-table-audit/contributors) who participated in this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
