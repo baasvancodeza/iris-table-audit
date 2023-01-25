@@ -51,7 +51,7 @@ Property CreateBusinessHost As %String(MAXLEN = "");
 Property UpdateBusinessHost As %String(MAXLEN = "");
 
 /// Interoperability host that inserted this entry (if applicable)
-Property HistorizeBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(%Ensemble("ConfigName"),"")}, ReadOnly ];
+Property HistorizeBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$s($GET(%Ensemble("ConfigName"),"Ens.Actor")'="Ens.Actor":%Ensemble("ConfigName"),1:$GET(%Ensemble("Process"),""))}, ReadOnly ];
 
 /// Created by Client IP (if applicable)
 Property CreateClientIP As %String(MAXLEN = "");

@@ -9,7 +9,7 @@ Property Suburb As %String(MAXLEN = 100);
 
 Property City As %String(MAXLEN = 100);
 
-Property ZipCode As %String(DISPLAYLIST = ",zero,one,two", JSONLISTPARAMETER = "DISPLAYLIST", VALUELIST = ",0,1,2");
+Property ZipCode As %String;
 
 Storage Default
 {

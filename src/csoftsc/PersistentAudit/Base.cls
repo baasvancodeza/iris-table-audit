@@ -36,10 +36,10 @@ Property CreateSystemUser As %String(MAXLEN = 100) [ InitialExpression = {$USERN
 Property UpdateSystemUser As %String(MAXLEN = 100) [ InitialExpression = {$USERNAME}, SqlComputeCode = { Set {*} = $USERNAME}, SqlComputed, SqlComputeOnChange = %%UPDATE ];
 
 /// Created by Interoperability Host (if applicable)
-Property CreateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(%Ensemble("ConfigName"),"")}, ReadOnly ];
+Property CreateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$s($GET(%Ensemble("ConfigName"),"Ens.Actor")'="Ens.Actor":%Ensemble("ConfigName"),1:$GET(%Ensemble("Process"),""))}, ReadOnly ];
 
 /// Last Updated by Interoperability Host (if applicable)
-Property UpdateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$GET(%Ensemble("ConfigName"),"")}, SqlComputeCode = { Set {*} = $GET(%Ensemble("ConfigName"),"") }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
+Property UpdateBusinessHost As %String(MAXLEN = "") [ InitialExpression = {$s($GET(%Ensemble("ConfigName"),"Ens.Actor")'="Ens.Actor":%Ensemble("ConfigName"),1:$GET(%Ensemble("Process"),""))}, SqlComputeCode = { Set {*} = $s($GET(%Ensemble("ConfigName"),"Ens.Actor")'="Ens.Actor":%Ensemble("ConfigName"),1:$GET(%Ensemble("Process"),"")) }, SqlComputed, SqlComputeOnChange = %%UPDATE ];
 
 /// Created by Client IP (if applicable)
 Property CreateClientIP As %String(MAXLEN = "") [ InitialExpression = {$SYSTEM.Process.ClientIPAddress()}, ReadOnly ];

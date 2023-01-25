@@ -26,7 +26,7 @@ ClassMethod Run()
 		Set tAddr.StreetName = "Virtual Street"
 		Set tAddr.Suburb = "Cyber Space"
 		Set tAddr.City = "Void"
-		Set tAddr.ZipCode = "1"
+		Set tAddr.ZipCode = "0001"
 		Set tCust.ReseidentialAddress = tAddr
 		Do tCust.%NormalizeObject()
 		$$$ThrowOnError(tCust.%Save())
@@ -64,7 +64,7 @@ ClassMethod Run()
 		Set tCust.ReseidentialAddress.StreetName = "std:cout Street"
 		Set tCust.ReseidentialAddress.Suburb = "Void Space"
 		Set tCust.ReseidentialAddress.City = "dev/null"
-		Set tCust.ReseidentialAddress.ZipCode = "2"
+		Set tCust.ReseidentialAddress.ZipCode = "0020"
 		Do tCust.%NormalizeObject()
 		$$$ThrowOnError(tCust.%Save())
 		set tResultSet = tSQLStmnt.%Execute(tSQLArgs...)
