@@ -1,4 +1,4 @@
-Class csoftsc.Demo.CustomerHistory Extends csoftsc.PersistentAudit.HistoryBase [ CompileAfter = Address ]
+Class csoftsc.Demo.CustomerHistory Extends csoftsc.PersistentAudit.HistoryBase [ CompileAfter = (Address,csoftsc.PersistentAudit.HistoryBase) ]
 {
 
 Property Name As %String;

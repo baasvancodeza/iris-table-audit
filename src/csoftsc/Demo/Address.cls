@@ -1,15 +1,15 @@
 Class csoftsc.Demo.Address Extends (%SerialObject, %Populate, %XML.Adaptor, %JSON.Adaptor)
 {
 
-Property StreetNumber As %String;
+Property StreetNumber As %String(POPSPEC = "Random(2000)");
 
-Property StreetName As %String(MAXLEN = 150);
+Property StreetName As %String(MAXLEN = 150, POPSPEC = "Street()");
 
-Property Suburb As %String(MAXLEN = 100);
+Property Suburb As %String(MAXLEN = 100, POPSPEC = "Syllable()");
 
-Property City As %String(MAXLEN = 100);
+Property City As %String(MAXLEN = 100, POPSPEC = "City()");
 
-Property ZipCode As %String;
+Property ZipCode As %String(POPSPEC = "USZip()");
 
 Storage Default
 {

@@ -1,0 +1,16 @@
+    // Unexpire passwords to simplify dev mode. Comment these two lines for Production use
+    zn "%SYS"
+    Do ##class(Security.Users).UnExpireUserPasswords("*")
+
+    // create IRISAPP namespace
+    do $SYSTEM.OBJ.Load("/home/irisowner/irisdev/Installer.cls", "ck") 
+    set sc = ##class(App.Installer).setup() 
+
+
+    // load all the code of the project as a ZPM package
+    zn "IRISAPP"
+    Do $System.OBJ.ImportDir("/home/irisowner/irisdev/src","*.inc",,,1)
+    Do $System.OBJ.ImportDir("/home/irisowner/irisdev/src","*.cls",,,1)
+    Do $System.OBJ.CompilePackage("csoftsc.PersistentAudit","ck")
+    Do $System.OBJ.CompilePackage("csoftsc.Demo","ck")
+    halt

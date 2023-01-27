@@ -1,4 +1,4 @@
-Class csoftsc.Demo.Customer Extends csoftsc.PersistentAudit.Base [ CompileAfter = (Address, csoftsc.Demo.CustomerHistory) ]
+Class csoftsc.Demo.Customer Extends csoftsc.PersistentAudit.Base [ CompileAfter = (Address, csoftsc.PersistentAudit.Base, csoftsc.Demo.CustomerHistory) ]
 {
 
 Index NameIndex On Name;
@@ -7,15 +7,15 @@ Index SurnameIndex On Surname;
 
 Parameter HISTORYTABLECLASS = "csoftsc.Demo.CustomerHistory";
 
-Property Name As %String [ Required ];
+Property Name As %String(POPSPEC = "FirstName()") [ Required ];
 
-Property Surname As %String(MAXLEN = 100) [ Required ];
+Property Surname As %String(MAXLEN = 100, POPSPEC = "LastName()") [ Required ];
 
-Property MobileNumber As %String [ Required ];
+Property MobileNumber As %String(POPSPEC = "USPhone()") [ Required ];
 
 Property ReseidentialAddress As Address;
 
-Property Email As %String(MAXLEN = 250);
+Property Email As %String(MAXLEN = 250, POPSPEC = "StringMin(10,250)");
 
 Property MarketingNewsletter As %Boolean [ InitialExpression = 1, Required ];
 
