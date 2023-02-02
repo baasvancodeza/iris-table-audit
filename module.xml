@@ -3,7 +3,7 @@
     <Document name="csoftsc-persistent-augit.ZPM">
         <Module>
             <Name>csoftsc-persistent-audit</Name>
-            <Version>1.0.0</Version>
+            <Version>1.1.0</Version>
             <Description>Persistent base classes to keep record history for auditing purposes</Description>
             <Packaging>module</Packaging>
             <SourcesRoot>src</SourcesRoot>
