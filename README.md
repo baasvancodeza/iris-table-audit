@@ -9,12 +9,38 @@ It can automatically purge old history records.
 # Installation
 
 zpm "install csoftsc-persistent-audit"  
+  
 The usage sample is available in the GitHub repo  
 ```
 git clone https://github.com/csoft-sc/iris-table-audit.git
 ```
 
-## Using the Demo
+## Running the Demo
+
+### Using Docker Compose
+- Clone the repo
+- Go nto your terminal of choice into the project directory
+- Build the container
+  ```
+  docker-compose build
+  ```
+- Start the container
+  ```
+  docker-compose up -d
+  ```
+- Open an IRIS session on the running container instance
+  ```
+  docker-compose exec iris iris session iris -U IRISAPP
+  ```
+- Run the following  
+  ```
+  Do ##class(csoftsc.Demo.RunDemo).Run()
+  ```
+- To go tot he Mangement Portal to run SQL queries on the tables go to below. Remember to replace the "hostname-or-ip with your computer's IP or hostname  
+  http://hostname-or-ip:9081/csp/sys/UtilHome.csp
+  
+
+### From Source
 
 - Clone the repo
 - Import the includes and classes and compile
@@ -23,7 +49,9 @@ git clone https://github.com/csoft-sc/iris-table-audit.git
 - Open a terminal
   - Change to the namespace where you have imported the package and imported the Demo srouce
   - Run the following  
-    ``Do ##class(csoftsc.Demo.RunDemo).Run()``
+    ```
+    Do ##class(csoftsc.Demo.RunDemo).Run()
+    ```
 
 # Package Structure
 
